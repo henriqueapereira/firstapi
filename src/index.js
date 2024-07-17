@@ -1,17 +1,43 @@
 const http = require('http');
-const users = require('./mocks/users');
+const { URL } = require('url');
+
+const routes = require('./routes');
 
 //cria o server
 const server = http.createServer((request, response) => {
-  console.log(`Request method: ${request.method} | Endpoint: ${request.url}`);
+  const parsedUrl = new URL(`http://localhost:3000${request.url}`);  
 
-  if (request.url === '/users' && request.method === 'GET'){
-    response.writeHead(200, { 'Content-Type': 'application/json' });
-    response.end(JSON.stringify(users));  
-  } else {    
+  console.log(`Request method: ${request.method} | Endpoint: ${parsedUrl.pathname}`);
+
+  let { pathname } = parsedUrl;
+  let id = null;
+
+  const splitEndPoint = pathname.split('/').filter(Boolean);
+
+  if (splitEndPoint.length > 1) {
+    pathname = `/${splitEndPoint[0]}/:id`;
+    id = splitEndPoint[1];
+  }
+
+  const route = routes.find((routObj) => (
+    routObj.endpoint === pathname && routObj.method === request.method
+  ));
+
+  if (route) {
+    request.query = parsedUrl.query;
+    request.params = { id };
+
+    route.handler(request, response);
+  } else {
     response.writeHead(404, { 'Content-Type': 'text/html' });
     response.end(`Cannot ${request.method} ${request.url}`);
   }
+
+  // if (request.url === '/users' && request.method === 'GET'){
+  //   UserController.listUsers(request, response);   
+  // } else {    
+  
+  // }
 
 });
 
